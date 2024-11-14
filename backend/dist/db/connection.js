@@ -1,4 +1,6 @@
 import { connect, disconnect } from "mongoose";
+import { config } from "dotenv";
+config();
 async function connectToDatabase() {
     try {
         await connect(process.env.MONGODB_URL);
