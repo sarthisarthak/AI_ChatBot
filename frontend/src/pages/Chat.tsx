@@ -1,10 +1,16 @@
 import { Avatar, Box, Button, IconButton, Typography } from "@mui/material";
-import React, { useRef, useState } from "react";
+import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { red } from "@mui/material/colors";
 import ChatItem from "../components/chat/ChatItem";
 import { IoMdSend } from "react-icons/io";
-import { sendChatRequest } from "../helpers/api-communicator";
+import {
+  deleteUserChats,
+  getUserChats,
+  sendChatRequest,
+} from "../helpers/api-communicator";
+import toast from "react-hot-toast";
+import { useNavigate } from "react-router-dom";
 // const chat_messages = [
 //   { role: "user", content: "Hello! How can you assist me today?" },
 //   {
@@ -40,6 +46,7 @@ type Message = {
 };
 
 const Chat = () => {
+  const navigate = useNavigate();
   const inputRef = useRef<HTMLInputElement | null>(null);
   const auth = useAuth();
   const [chatMessages, setChatMessages] = useState<Message[]>([]);
@@ -56,6 +63,42 @@ const Chat = () => {
     const chatData = await sendChatRequest(content);
     setChatMessages([...chatData.chats]);
   };
+
+  const handleDeleteChats = async () => {
+    try {
+      toast.loading("Deleting Chats", { id: "deleteChats" });
+      await deleteUserChats();
+      setChatMessages([]);
+      toast.success("Successfully Deleted Chats", { id: "deleteChats" });
+    } catch (error) {
+      //@ts-ignore
+      console.log(error.message);
+      toast.error("Deleting Chats Failed", { id: "deleteChats" });
+    }
+  };
+
+  useLayoutEffect(() => {
+    // console.log("hi");
+    if (auth?.isLoggedIn && auth.user) {
+      toast.loading("Loading Chats", { id: "loadchats" });
+      getUserChats()
+        .then((data) => {
+          setChatMessages([...data.chats]);
+          toast.success("Successfully Loaded Chats", { id: "loadchats" });
+        })
+        .catch((err) => {
+          console.log(err.message);
+          toast.error("Loading Failed", { id: "loadchats" });
+        });
+    }
+  }, [auth]);
+
+  useEffect(() => {
+    if (!auth?.user) {
+      return navigate("/login");
+    }
+  }, [auth]);
+
   return (
     <Box
       sx={{
@@ -120,6 +163,7 @@ const Chat = () => {
                 bgcolor: red.A400,
               },
             }}
+            onClick={handleDeleteChats}
           >
             Clear Conversation
           </Button>
@@ -170,7 +214,6 @@ const Chat = () => {
         <div
           style={{
             width: "100%",
-            padding: "20px",
             borderRadius: 8,
             backgroundColor: "rgb(17,27,39)",
             display: "flex",
@@ -183,7 +226,7 @@ const Chat = () => {
             style={{
               width: "100%",
               backgroundColor: "transparent",
-              padding: "10px",
+              padding: "30px",
               border: "none",
               outline: "none",
               color: "white",
@@ -192,7 +235,7 @@ const Chat = () => {
           />
           <IconButton
             onClick={handleSubmit}
-            sx={{ ml: "auto", color: "white" }}
+            sx={{ ml: "auto", color: "white", mx: 1 }}
           >
             <IoMdSend />
           </IconButton>
